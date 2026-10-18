@@ -124,6 +124,26 @@ The V2 desktop prototype has been executed in PyCharm. The interface includes th
 
 During the current software validation, simulated water-flow readings above the configured 20 L/min study threshold generated warning records in the Alerts view, validating the basic flow from measurement to persistence, rule evaluation, and visual alert presentation.
 
+## V2 — Functional Validation
+
+The IoT-ready V2 prototype was executed and validated locally in PyCharm.
+
+The validation confirmed the core software flow:
+
+**Simulated ESP32 Reading → SQLite Persistence → Rule Evaluation → Alert Generation → GUI**
+
+Observed results:
+
+- The dashboard correctly displayed the latest water-flow reading.
+- One IoT device was registered and monitored.
+- Simulated readings above the configured **20 L/min** study threshold generated `WARNING` events.
+- After the test sequence, the dashboard displayed **19.00 L/min** as the latest reading and **9 accumulated alerts**.
+- The Alerts view preserved the previous warning events even after the current flow returned below the configured threshold.
+- Each warning recorded timestamp, device ID, measured flow, and configured threshold.
+- Manual/CSV/IoT monitoring remains separated from critical physical actions, which stay under human oversight.
+
+This validation provides software-level evidence that the current V2 measurement-to-alert pipeline is functioning as designed.
+
 ## Roadmap
 
 - **v1:** manual/CSV sustainability data flow, validation, SQLite storage, dashboard, indicators, goals, alerts, and reports
