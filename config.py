@@ -1,4 +1,4 @@
-DB_PATH = "eco_data_sp_v5_1.db"
+DB_PATH = "eco_data_sp_v5_2.db"
 WATER_TARIFF = 5.00
 ENERGY_TARIFF = 1.20
 EMISSION_FACTOR = 0.475

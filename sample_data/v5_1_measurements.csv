@@ -1,7 +1,7 @@
 sensor_uid,metric,value,unit,measured_at
-FLOW-001,water_flow,19,L/min,2026-10-20T12:00:00+00:00
-FLOW-001,water_consumption,12.5,m³,2026-10-20T12:05:00+00:00
-CT-001,electrical_current,4.2,A,2026-10-20T12:10:00+00:00
-VOLT-001,voltage,220,V,2026-10-20T12:10:00+00:00
-METER-001,power,6.5,kW,2026-10-20T12:15:00+00:00
-METER-001,energy_consumption,38.4,kWh,2026-10-20T12:20:00+00:00
+FLOW-IND-001,water_flow,19,L/min,2026-10-20T12:00:00+00:00
+FLOW-IND-001,water_consumption,12.5,m³,2026-10-20T12:05:00+00:00
+CT-IND-001,electrical_current,4.2,A,2026-10-20T12:10:00+00:00
+VOLT-IND-001,voltage,220,V,2026-10-20T12:10:00+00:00
+METER-IND-001,power,6.5,kW,2026-10-20T12:15:00+00:00
+METER-IND-001,energy_consumption,38.4,kWh,2026-10-20T12:20:00+00:00

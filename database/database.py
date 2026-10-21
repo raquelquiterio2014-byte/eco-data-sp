@@ -1,61 +1,41 @@
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from config import DB_PATH, WATER_TARIFF, ENERGY_TARIFF, EMISSION_FACTOR
 
 @contextmanager
 def connect():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    try:
-        yield con
-        con.commit()
-    finally:
-        con.close()
+    con=sqlite3.connect(DB_PATH); con.row_factory=sqlite3.Row
+    try: yield con; con.commit()
+    finally: con.close()
 
-def fetch(sql, params=()):
-    with connect() as con:
-        return [dict(r) for r in con.execute(sql, params).fetchall()]
-
-def execute(sql, params=()):
-    with connect() as con:
-        return con.execute(sql, params).lastrowid
+def fetch(sql,params=()):
+    with connect() as con: return [dict(r) for r in con.execute(sql,params).fetchall()]
+def execute(sql,params=()):
+    with connect() as con: return con.execute(sql,params).lastrowid
 
 def init_database():
     with connect() as con:
         con.executescript("""
-        CREATE TABLE IF NOT EXISTS sensors(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sensor_uid TEXT UNIQUE NOT NULL,
-          deployment_class TEXT NOT NULL,
-          sensor_type TEXT NOT NULL,
-          manufacturer TEXT, model TEXT, physical_principle TEXT,
-          measured_variable TEXT NOT NULL, measurement_range TEXT, accuracy TEXT,
-          interface TEXT, supply_voltage TEXT, current_consumption TEXT,
-          nominal_output TEXT, protocol TEXT, device_uid TEXT,
-          installation_point TEXT, calibration_status TEXT, datasheet_source TEXT,
-          selection_reason TEXT, safety_notes TEXT, status TEXT DEFAULT 'PLANNED'
-        );
-        CREATE TABLE IF NOT EXISTS measurements(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sensor_uid TEXT NOT NULL, metric TEXT NOT NULL, value REAL NOT NULL,
-          unit TEXT NOT NULL, source TEXT NOT NULL, measured_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS alerts(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sensor_uid TEXT, metric TEXT, severity TEXT, message TEXT, created_at TEXT
-        );
-        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS sensors(id INTEGER PRIMARY KEY AUTOINCREMENT,sensor_uid TEXT UNIQUE NOT NULL,deployment_class TEXT NOT NULL,sensor_type TEXT NOT NULL,manufacturer TEXT,model TEXT,physical_principle TEXT,measured_variable TEXT NOT NULL,measurement_range TEXT,accuracy TEXT,interface TEXT,supply_voltage TEXT,current_consumption TEXT,nominal_output TEXT,protocol TEXT,device_uid TEXT,installation_point TEXT,calibration_status TEXT,datasheet_source TEXT,selection_reason TEXT,safety_notes TEXT,status TEXT DEFAULT 'ACTIVE');
+        CREATE TABLE IF NOT EXISTS measurements(id INTEGER PRIMARY KEY AUTOINCREMENT,sensor_uid TEXT NOT NULL,metric TEXT NOT NULL,value REAL NOT NULL,unit TEXT NOT NULL,source TEXT NOT NULL,measured_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT,sensor_uid TEXT,metric TEXT,severity TEXT,message TEXT,created_at TEXT);
+        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS hardware_candidates(id INTEGER PRIMARY KEY AUTOINCREMENT,candidate_uid TEXT UNIQUE NOT NULL,domain TEXT NOT NULL,manufacturer TEXT NOT NULL,model TEXT NOT NULL,instrument_type TEXT NOT NULL,measured_variables TEXT NOT NULL,measurement_range TEXT,accuracy TEXT,communication TEXT,application TEXT,integration_path TEXT,eco_fit TEXT,official_source TEXT NOT NULL,evidence_note TEXT,status TEXT DEFAULT 'CANDIDATE');
         """)
         seeds=[
-          ("FLOW-001","SENSOR_INTEGRATION","Electromagnetic / Ultrasonic Flow Meter","To be selected","To be selected","Flow measurement","water_flow","To be sized","To be verified","Industrial output","Per instrument","Per instrument","L/min, m³/h, accumulated m³","4–20 mA / pulse / Modbus (examples)","GATEWAY-001","Water inlet / process-water line","Required","Manufacturer datasheet required","Possible instrumentation for water flow and consumption.","Verify process compatibility, pressure, temperature, range, accuracy, calibration and safety.","PLANNED"),
-          ("CT-001","SENSOR_INTEGRATION","Current Transformer (CT)","To be selected","To be selected","Electromagnetic induction","electrical_current","To be sized","To be verified","Meter input","Per instrument","Per instrument","Current (A)","Energy meter / gateway","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for electrical current.","Ratio, burden, insulation and protection require engineering definition.","PLANNED"),
-          ("VOLT-001","SENSOR_INTEGRATION","Voltage Transducer","To be selected","To be selected","Electrical transduction","voltage","To be sized","To be verified","Meter input","Per instrument","Per instrument","Voltage (V)","Energy meter / gateway","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for voltage.","Requires isolation, protection and qualified electrical design.","PLANNED"),
-          ("METER-001","SENSOR_INTEGRATION","Multifunction Energy Meter","To be selected","To be selected","Electrical metering","power_energy","To be sized","To be verified","Industrial interface","Per instrument","Per instrument","kW / accumulated kWh","Modbus RTU/TCP (example)","GATEWAY-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for power and energy.","Metering class, wiring, CT compatibility and certifications depend on installation.","PLANNED")
-        ]
-        con.executemany("""INSERT OR IGNORE INTO sensors(
-          sensor_uid,deployment_class,sensor_type,manufacturer,model,physical_principle,
-          measured_variable,measurement_range,accuracy,interface,supply_voltage,current_consumption,
-          nominal_output,protocol,device_uid,installation_point,calibration_status,datasheet_source,
-          selection_reason,safety_notes,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",seeds)
+        ("FLOW-IND-001","SENSOR_INTEGRATION","Electromagnetic / Ultrasonic Flow Meter","To be selected","To be selected","Flow measurement","water_flow","To be sized for process","To be verified","Industrial instrument output","Per selected instrument","Per selected instrument","L/min, m³/h, accumulated m³","4–20 mA / pulse / Modbus (examples)","GATEWAY-001","Main water inlet / selected process-water line","Required","Manufacturer datasheet required before deployment","Possible instrumentation for water flow and consumption; final hardware depends on deployment requirements.","Verify process compatibility, pressure, temperature, range, accuracy, calibration and safety requirements.","PLANNED"),
+        ("CT-IND-001","SENSOR_INTEGRATION","Current Transformer (CT)","To be selected","To be selected","Electromagnetic induction","electrical_current","To be sized for circuit","To be verified","Industrial meter input","Per selected instrument","Per selected instrument","Current (A)","Energy meter / gateway interface","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required before deployment","Possible instrumentation for electrical current measurement.","CT ratio, burden, insulation, installation category and electrical protection require engineering definition.","PLANNED"),
+        ("VOLT-IND-001","SENSOR_INTEGRATION","Voltage Transducer","To be selected","To be selected","Electrical transduction","voltage","To be sized for circuit","To be verified","Industrial meter input","Per selected instrument","Per selected instrument","Voltage (V)","Energy meter / gateway interface","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required before deployment","Possible instrumentation for voltage measurement.","Requires appropriate isolation, protection, installation category and qualified electrical design.","PLANNED"),
+        ("METER-IND-001","SENSOR_INTEGRATION","Multifunction Energy Meter","To be selected","To be selected","Electrical metering","power_energy","To be sized for system","To be verified","Industrial digital/analog interface","Per selected instrument","Per selected instrument","kW / accumulated kWh","Modbus RTU/TCP (example)","GATEWAY-001","Electrical distribution panel","Required","Manufacturer datasheet required before deployment","Possible instrumentation for power and accumulated energy measurement.","Final wiring, metering class, CT compatibility, communications and certifications depend on the installation.","PLANNED")]
+        con.executemany("INSERT OR IGNORE INTO sensors(sensor_uid,deployment_class,sensor_type,manufacturer,model,physical_principle,measured_variable,measurement_range,accuracy,interface,supply_voltage,current_consumption,nominal_output,protocol,device_uid,installation_point,calibration_status,datasheet_source,selection_reason,safety_notes,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",seeds)
+        candidates=[
+        ("W-EH-PROMAG-W400","WATER","Endress+Hauser","Proline Promag W 400","Electromagnetic flowmeter","Water flow; volume","Configuration-dependent; verify selected nominal diameter and process conditions","Standard: ±0.5% of reading + 1 mm/s; optional: ±0.2% of reading ±2 mm/s","Modbus RS485 available; other transmitter options exist","Water and wastewater flow monitoring","Flowmeter → industrial communication/gateway → Eco Data SP","HIGH","https://www.endress.com/en/field-instruments-overview/flow-measurement-product-overview/electromagnetic-flowmeter-promag-w400-5w4c","Official operating documentation supports Modbus RS485 and published performance values.","CANDIDATE"),
+        ("W-SIE-FM520","WATER","Siemens","SITRANS FM520 (FMS500 + FMT020)","Electromagnetic flowmeter","Water flow; volume","FMS500: DN 15–300 coned; DN 350–2000 full bore","Configuration/calibration dependent; verify exact system","HART; PROFINET; Modbus TCP/RTU; PROFIBUS; EtherNet/IP","Water and wastewater measurement","Flowmeter → industrial network/gateway → Eco Data SP","HIGH","https://www.siemens.com/en-gb/products/sitrans/fms500/","Official Siemens documentation; exact communication depends on configured transmitter/module.","CANDIDATE"),
+        ("W-ABB-AQUAMASTER4","WATER","ABB","AquaMaster4","Electromagnetic water flowmeter","Water flow; volume; pressure on selected tiers","Configuration-dependent; verify selected sensor/tier","Up to ±0.2% ±0.5 mm/s for published configurations","Pulse; Modbus; selected mobile tiers: 4G/MQTTS or NB-IoT","Water networks, district metering and leakage-oriented monitoring","Flowmeter → Modbus or IoT communication → ingestion service → Eco Data SP","HIGH","https://new.abb.com/products/measurement-products/flow/electromagnetic-flowmeters/water-waste-water/aquamaster-few400-electromagnetic-flowmeter","Exact specification must be tied to the selected AquaMaster4 tier.","CANDIDATE"),
+        ("E-SE-PM5560","ENERGY","Schneider Electric","PowerLogic PM5560","Multifunction power & energy meter","Voltage; current; power; energy; frequency; power factor","20–400 V L-N / 20–690 V L-L for relevant configurations; 1 A/5 A CT inputs","Active energy Class 0.2S","Modbus RTU/RS485; Modbus TCP/IP; Ethernet","Industrial/commercial electrical monitoring","CT + voltage inputs → PM5560 → Modbus → Eco Data SP","HIGH","https://www.se.com/br/pt/download/document/JPT40401/","Official Schneider documentation; final wiring and CT selection remain site-specific.","CANDIDATE"),
+        ("E-SIE-PAC3220","ENERGY","Siemens","SENTRON PAC3220","Power monitoring device","Voltage; current; active/reactive power; energy; THD","System/variant-dependent; CT x/1 A or x/5 A configurations","Voltage ±0.2%; current ±0.2%; active power ±0.5%; active energy Class 0.5","Modbus TCP; optional expansion architecture including RS485","Electrical distribution and industrial power monitoring","CT + voltage inputs → PAC3220 → Modbus TCP → Eco Data SP","HIGH","https://support.industry.siemens.com/cs/attachments/109989003/SIE_SS_PAC_7KM32201BA011EA0.pdf","Official Siemens technical data documents Modbus TCP and measurement performance.","CANDIDATE"),
+        ("E-ABB-M4M20","ENERGY","ABB","M4M 20","Network analyzer / multifunction meter","Current; voltage; energy; power; THD","Up to 400 V L-N / 690 V L-L for relevant configurations; CT 1 A/5 A","Active energy Class 0.5S","Variant-dependent: Modbus RTU or Modbus TCP/IP","Industrial plants, commercial buildings and infrastructure","CT + direct voltage measurement → M4M → Modbus → Eco Data SP","HIGH","https://new.abb.com/low-voltage/products/system-pro-m/energy-efficiency-devices/m4m-network-analyzers","Official ABB documentation states CT requirement and protocol availability by variant.","CANDIDATE")]
+        con.executemany("INSERT OR IGNORE INTO hardware_candidates(candidate_uid,domain,manufacturer,model,instrument_type,measured_variables,measurement_range,accuracy,communication,application,integration_path,eco_fit,official_source,evidence_note,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",candidates)
         for k,v in [("water_tariff",WATER_TARIFF),("energy_tariff",ENERGY_TARIFF),("emission_factor",EMISSION_FACTOR)]:
             con.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",(k,str(v)))

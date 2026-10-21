@@ -1,51 +1,77 @@
-# Eco Data SP — Sustainability Platform 🌱📊
+# Eco Data SP — Sustainability Platform
 
-## Version 5.1 — Sensor Integration Architecture
+## V5.2 — Hardware Selection Study
 
-Eco Data SP is a Python sustainability monitoring platform that evolves environmental and consumption data into traceable analytics for human decision support.
+V5.2 preserves the V5.1 sensor-integration architecture and adds an **evidence-backed commercial hardware candidate study** for water and electrical monitoring.
+
+The purpose is not to recommend a purchase. It is to show how software requirements can be traced to real industrial instrumentation using official manufacturer documentation.
+
+### New V5.2 module
+
+**Hardware Selection Study** compares:
+
+- manufacturer and model
+- instrument type and measured variables
+- measurement range
+- accuracy / metering class
+- communication protocol
+- typical application
+- possible Eco Data SP integration path
+- official manufacturer source
+- evidence note and candidate status
+
+No prices are stored or displayed.
+
+### Current candidate matrix
+
+**Water**
+- Endress+Hauser Proline Promag W 400
+- Siemens SITRANS FM520 (FMS500 + FMT020)
+- ABB AquaMaster4
+
+**Electrical monitoring**
+- Schneider Electric PowerLogic PM5560
+- Siemens SENTRON PAC3220
+- ABB M4M 20
+
+The matrix intentionally keeps all products as **CANDIDATE**. A real deployment requires engineering review of process/electrical conditions, measurement range, accuracy, communications, installation, calibration, cybersecurity and safety.
+
+### Architecture
+
+**Physical Variable → Industrial Instrument → Modbus / Industrial Ethernet / Gateway → Eco Data SP → SQLite → Analytics → Cost → Estimated CO₂e → Human Decision**
+
+A key V5.2 finding is that a multifunction electrical meter can consolidate voltage, current, power and energy measurements. Depending on the product and installation, external current transformers may still be required.
 
 ### Development journey
-- **V1 — Data Foundation:** manual/CSV input, validation, SQLite and dashboard
-- **V2 — Water Monitoring:** water-flow telemetry, device monitoring and alerts
-- **V3 — Energy Monitoring:** electrical power and energy telemetry
-- **V4 — Cost Analytics:** water and energy consumption combined with configurable tariffs
-- **V5 — CO₂e:** estimated emissions from energy consumption and a documented emission factor
-- **V5.1 — Sensor Integration:** registration of sensors/meters and measurement provenance
-- **Next V6 — AI Integration:** planned intelligence layer on structured, traceable data
 
-## V5.1 focus
-V5.1 prepares the software for physical sensor and meter integration without locking the platform to a specific hardware model.
+**V1 Data Foundation → V2 Water → V3 Energy → V4 Cost → V5 CO₂e → V5.1 Sensor Integration → V5.2 Hardware Selection Study → V6 AI**
 
-Possible instrumentation examples:
-- Water flow & consumption → electromagnetic or ultrasonic flow meter
-- Electrical current → Current Transformer (CT)
-- Voltage → voltage transducer
-- Power & energy → multifunction energy meter
-- Cost → calculated from consumption × tariff; no physical sensor
-- Estimated CO₂e → calculated from kWh × documented emission factor; no direct sensor in this architecture
+### Research documentation
 
-These are architectural examples, not fixed hardware requirements. Final selection depends on measurement range, accuracy, operating environment, communication interface, installation conditions, calibration and applicable safety requirements.
+The complete evidence trail is stored under `docs/hardware-selection/`:
 
-## Architecture
-**Physical Variable → Sensor / Meter → Device / Gateway → Connectivity → Measurement → SQLite → Analytics → Cost → CO₂e → Human Decision**
+- `research-methodology.md` — official-source policy, inclusion/exclusion criteria and study boundaries
+- `water-instrumentation-study.md` — rationale for the three water candidates
+- `energy-instrumentation-study.md` — rationale for the three electrical candidates
+- `selection-matrix.md` — side-by-side technical comparison
+- `integration-analysis.md` — vendor-neutral integration architecture
+- `references.md` — official manufacturer sources consulted
 
-## Sensor metadata
-The platform can store Sensor ID, type, manufacturer, model, physical principle, measured variable, measurement range, accuracy, interface, supply voltage, current consumption, nominal output, protocol, device ID, installation point, calibration status, datasheet source, selection reason, safety notes and status.
+The documentation distinguishes **candidate shortlist** from **final hardware selection** and records why each commercial family was included.
 
-## Preserved capabilities
-V5.1 keeps Water, Energy, Cost, estimated CO₂e, Alerts, CSV import, SQLite persistence and Measurement History while adding sensor-to-measurement traceability.
+### Run in PyCharm
 
-## Technology stack
-**Python · CustomTkinter · SQLite · Pandas · MQTT-ready architecture**
-
-## Run locally
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
 
-## Engineering boundary
-Eco Data SP is a monitoring and sustainability decision-support platform. Sensor and meter examples do not replace equipment selection, electrical/process engineering, calibration, industrial safety assessment or manufacturer documentation for a real deployment.
+The database is created locally as `eco_data_sp_v5_2.db`.
+
+### Engineering boundary
+
+The commercial models are research references based on official manufacturer material. They are not endorsements, partnerships, procurement recommendations, or final deployment specifications.
 
 ## Author
-**Raquel Cruz** — ADS student and developer building practical projects in software, data, IoT and artificial intelligence.
+
+**Raquel Cruz**
