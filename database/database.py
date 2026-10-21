@@ -1,19 +1,61 @@
-"""SQLite initialization for the Eco Data SP MVP."""
 import sqlite3
-from config import DATABASE_DIR, DATABASE_PATH
+from contextlib import contextmanager
+from config import DB_PATH, WATER_TARIFF, ENERGY_TARIFF, EMISSION_FACTOR
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS organizations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS units (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (organization_id) REFERENCES organizations(id));
-CREATE TABLE IF NOT EXISTS water_consumption (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL, reference_month TEXT NOT NULL, consumption_m3 REAL NOT NULL CHECK (consumption_m3 >= 0), cost REAL CHECK (cost >= 0), FOREIGN KEY (unit_id) REFERENCES units(id));
-CREATE TABLE IF NOT EXISTS energy_consumption (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL, reference_month TEXT NOT NULL, consumption_kwh REAL NOT NULL CHECK (consumption_kwh >= 0), cost REAL CHECK (cost >= 0), FOREIGN KEY (unit_id) REFERENCES units(id));
-CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL, metric TEXT NOT NULL, target_value REAL NOT NULL, target_date TEXT, FOREIGN KEY (unit_id) REFERENCES units(id));
-CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL, metric TEXT NOT NULL, message TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (unit_id) REFERENCES units(id));
-"""
+@contextmanager
+def connect():
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    try:
+        yield con
+        con.commit()
+    finally:
+        con.close()
 
+def fetch(sql, params=()):
+    with connect() as con:
+        return [dict(r) for r in con.execute(sql, params).fetchall()]
 
-def initialize_database() -> None:
-    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(DATABASE_PATH) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.executescript(SCHEMA)
+def execute(sql, params=()):
+    with connect() as con:
+        return con.execute(sql, params).lastrowid
+
+def init_database():
+    with connect() as con:
+        con.executescript("""
+        CREATE TABLE IF NOT EXISTS sensors(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sensor_uid TEXT UNIQUE NOT NULL,
+          deployment_class TEXT NOT NULL,
+          sensor_type TEXT NOT NULL,
+          manufacturer TEXT, model TEXT, physical_principle TEXT,
+          measured_variable TEXT NOT NULL, measurement_range TEXT, accuracy TEXT,
+          interface TEXT, supply_voltage TEXT, current_consumption TEXT,
+          nominal_output TEXT, protocol TEXT, device_uid TEXT,
+          installation_point TEXT, calibration_status TEXT, datasheet_source TEXT,
+          selection_reason TEXT, safety_notes TEXT, status TEXT DEFAULT 'PLANNED'
+        );
+        CREATE TABLE IF NOT EXISTS measurements(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sensor_uid TEXT NOT NULL, metric TEXT NOT NULL, value REAL NOT NULL,
+          unit TEXT NOT NULL, source TEXT NOT NULL, measured_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS alerts(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sensor_uid TEXT, metric TEXT, severity TEXT, message TEXT, created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        """)
+        seeds=[
+          ("FLOW-001","SENSOR_INTEGRATION","Electromagnetic / Ultrasonic Flow Meter","To be selected","To be selected","Flow measurement","water_flow","To be sized","To be verified","Industrial output","Per instrument","Per instrument","L/min, m³/h, accumulated m³","4–20 mA / pulse / Modbus (examples)","GATEWAY-001","Water inlet / process-water line","Required","Manufacturer datasheet required","Possible instrumentation for water flow and consumption.","Verify process compatibility, pressure, temperature, range, accuracy, calibration and safety.","PLANNED"),
+          ("CT-001","SENSOR_INTEGRATION","Current Transformer (CT)","To be selected","To be selected","Electromagnetic induction","electrical_current","To be sized","To be verified","Meter input","Per instrument","Per instrument","Current (A)","Energy meter / gateway","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for electrical current.","Ratio, burden, insulation and protection require engineering definition.","PLANNED"),
+          ("VOLT-001","SENSOR_INTEGRATION","Voltage Transducer","To be selected","To be selected","Electrical transduction","voltage","To be sized","To be verified","Meter input","Per instrument","Per instrument","Voltage (V)","Energy meter / gateway","ENERGY-METER-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for voltage.","Requires isolation, protection and qualified electrical design.","PLANNED"),
+          ("METER-001","SENSOR_INTEGRATION","Multifunction Energy Meter","To be selected","To be selected","Electrical metering","power_energy","To be sized","To be verified","Industrial interface","Per instrument","Per instrument","kW / accumulated kWh","Modbus RTU/TCP (example)","GATEWAY-001","Electrical distribution panel","Required","Manufacturer datasheet required","Possible instrumentation for power and energy.","Metering class, wiring, CT compatibility and certifications depend on installation.","PLANNED")
+        ]
+        con.executemany("""INSERT OR IGNORE INTO sensors(
+          sensor_uid,deployment_class,sensor_type,manufacturer,model,physical_principle,
+          measured_variable,measurement_range,accuracy,interface,supply_voltage,current_consumption,
+          nominal_output,protocol,device_uid,installation_point,calibration_status,datasheet_source,
+          selection_reason,safety_notes,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",seeds)
+        for k,v in [("water_tariff",WATER_TARIFF),("energy_tariff",ENERGY_TARIFF),("emission_factor",EMISSION_FACTOR)]:
+            con.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",(k,str(v)))

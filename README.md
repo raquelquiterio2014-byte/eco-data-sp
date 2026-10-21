@@ -1,162 +1,51 @@
-# Eco Data SP 🌱📊
+# Eco Data SP — Sustainability Platform 🌱📊
 
-**Eco Data SP — Sustainability Platform** is a Python-based sustainability monitoring platform designed to transform environmental and consumption data into actionable insights.
+## Version 5.1 — Sensor Integration Architecture
 
-The project has evolved from a manual/CSV data MVP into an **IoT-ready architecture**, while preserving the original principle: advanced technology should only be added when it improves the usefulness, reliability, or scalability of the system.
+Eco Data SP is a Python sustainability monitoring platform that evolves environmental and consumption data into traceable analytics for human decision support.
 
-## Project goal
+### Development journey
+- **V1 — Data Foundation:** manual/CSV input, validation, SQLite and dashboard
+- **V2 — Water Monitoring:** water-flow telemetry, device monitoring and alerts
+- **V3 — Energy Monitoring:** electrical power and energy telemetry
+- **V4 — Cost Analytics:** water and energy consumption combined with configurable tariffs
+- **V5 — CO₂e:** estimated emissions from energy consumption and a documented emission factor
+- **V5.1 — Sensor Integration:** registration of sensors/meters and measurement provenance
+- **Next V6 — AI Integration:** planned intelligence layer on structured, traceable data
 
-Many organizations manage water, energy, cost, and sustainability information across bills, spreadsheets, PDFs, and disconnected systems. Eco Data SP aims to centralize these records, validate them, monitor relevant indicators, identify abnormal conditions, and present clear information to support human decision-making.
+## V5.1 focus
+V5.1 prepares the software for physical sensor and meter integration without locking the platform to a specific hardware model.
 
-## Version 2 — IoT-ready architecture
+Possible instrumentation examples:
+- Water flow & consumption → electromagnetic or ultrasonic flow meter
+- Electrical current → Current Transformer (CT)
+- Voltage → voltage transducer
+- Power & energy → multifunction energy meter
+- Cost → calculated from consumption × tariff; no physical sensor
+- Estimated CO₂e → calculated from kWh × documented emission factor; no direct sensor in this architecture
 
-The V2 architecture follows a layered IoT approach:
+These are architectural examples, not fixed hardware requirements. Final selection depends on measurement range, accuracy, operating environment, communication interface, installation conditions, calibration and applicable safety requirements.
 
-**Sensors / Meters → ESP32 / Edge → Wi-Fi or LoRa → MQTT → Eco Data SP → SQLite → Analytics & Alerts → Human Decision**
+## Architecture
+**Physical Variable → Sensor / Meter → Device / Gateway → Connectivity → Measurement → SQLite → Analytics → Cost → CO₂e → Human Decision**
 
-The platform remains hybrid and can receive data from:
+## Sensor metadata
+The platform can store Sensor ID, type, manufacturer, model, physical principle, measured variable, measurement range, accuracy, interface, supply voltage, current consumption, nominal output, protocol, device ID, installation point, calibration status, datasheet source, selection reason, safety notes and status.
 
-**Manual Input | CSV Import | IoT Telemetry**
-
-Organizations therefore do not need a complete IoT infrastructure to start using the platform.
-
-## First IoT use case: Water Monitoring 💧
-
-The first connected use case focuses on water-flow monitoring.
-
-- Physical quantity: **water flow**
-- Unit: **L/min**
-- Initial study range: **0–30 L/min**
-- Sampling interval: **10 seconds**
-- Edge device: **ESP32**
-- Communication: **Wi-Fi**, with the architecture prepared for alternatives such as **LoRa**
-- Messaging: **MQTT / Mosquitto-compatible**
-- Initial configurable warning reference: **20 L/min**
-
-> The 20 L/min value is an initial study threshold, not a universal leak threshold. In a real deployment, alert rules must be configured according to each installation and operating context.
-
-## V2 features
-
-- Sustainability overview dashboard
-- Water-flow telemetry
-- IoT device registry
-- Device connectivity and last-seen tracking
-- MQTT telemetry ingestion
-- Manual ESP32 reading simulator for validation without physical hardware
-- CSV import
-- Data-source provenance: `MANUAL`, `CSV`, or `IOT`
-- Configurable alert-rule data model
-- High-flow warnings
-- SQLite persistence
-- Architecture prepared for organizations, units, devices, measurements, and alerts
-- Human oversight for critical decisions
-
-## Edge and platform responsibilities
-
-### Edge / device
-The ESP32 can collect measurements and support local detection of abnormal conditions. This architecture allows essential monitoring logic to remain close to the physical environment and reduces dependence on continuous connectivity.
-
-### Eco Data SP
-The platform is responsible for storing historical data, organizing devices and measurements, presenting monitoring information, applying platform-level rules, and supporting analytics, alerts, and reports.
-
-Critical physical actions are **not automatically executed in the current MVP**. The system informs; people decide.
-
-## Scalability principle
-
-A prototype with one sensor does not prove that a system is ready for hundreds of devices.
-
-For that reason, V2 begins separating responsibilities for:
-
-- organizations and units
-- device identification
-- telemetry
-- connectivity status
-- measurements
-- alert rules
-- alerts
-
-This provides a foundation for future fleet management, diagnostics, multi-location deployments, and larger-scale monitoring.
+## Preserved capabilities
+V5.1 keeps Water, Energy, Cost, estimated CO₂e, Alerts, CSV import, SQLite persistence and Measurement History while adding sensor-to-measurement traceability.
 
 ## Technology stack
+**Python · CustomTkinter · SQLite · Pandas · MQTT-ready architecture**
 
-**Python · CustomTkinter · SQLite · Pandas · MQTT · Paho MQTT**
-
-IoT architecture concepts include **ESP32, edge processing, Wi-Fi/LoRa communication, and Mosquitto-compatible MQTT messaging**.
-
-## Running the V2 prototype
-
-1. Open the project in PyCharm.
-2. Use Python 3.10 or newer.
-3. Install the dependencies:
-
+## Run locally
 ```bash
 pip install -r requirements.txt
-```
-
-4. Run:
-
-```bash
 python main.py
 ```
 
-A running MQTT broker is optional for the first software validation. Without Mosquitto, the GUI can still be tested using the built-in Water Live simulator.
-
-### Example MQTT topic
-
-```text
-eco-data/<unit>/<device>/telemetry
-```
-
-### Example payload
-
-```json
-{
-  "device_id": "ESP32-WATER-001",
-  "metric": "water_flow",
-  "value": 12.4,
-  "unit": "L/min"
-}
-```
-
-## Current validation
-
-The V2 desktop prototype has been executed in PyCharm. The interface includes the Sustainability Overview, Water Live, IoT Devices, Alerts, and CSV import functions.
-
-During the current software validation, simulated water-flow readings above the configured 20 L/min study threshold generated warning records in the Alerts view, validating the basic flow from measurement to persistence, rule evaluation, and visual alert presentation.
-
-## V2 — Functional Validation
-
-The IoT-ready V2 prototype was executed and validated locally in PyCharm.
-
-The validation confirmed the core software flow:
-
-**Simulated ESP32 Reading → SQLite Persistence → Rule Evaluation → Alert Generation → GUI**
-
-Observed results:
-
-- The dashboard correctly displayed the latest water-flow reading.
-- One IoT device was registered and monitored.
-- Simulated readings above the configured **20 L/min** study threshold generated `WARNING` events.
-- After the test sequence, the dashboard displayed **19.00 L/min** as the latest reading and **9 accumulated alerts**.
-- The Alerts view preserved the previous warning events even after the current flow returned below the configured threshold.
-- Each warning recorded timestamp, device ID, measured flow, and configured threshold.
-- Manual/CSV/IoT monitoring remains separated from critical physical actions, which stay under human oversight.
-
-This validation provides software-level evidence that the current V2 measurement-to-alert pipeline is functioning as designed.
-
-## Roadmap
-
-- **v1:** manual/CSV sustainability data flow, validation, SQLite storage, dashboard, indicators, goals, alerts, and reports
-- **v2:** IoT-ready architecture, device registry, water telemetry, MQTT integration, edge concepts, connectivity monitoring, and configurable alerts
-- **Next:** improve dashboard visualization, configurable alert controls, device-health monitoring, offline synchronization, and broader sustainability telemetry
-- **Future:** anomaly detection, adaptive baselines, APIs, forecasting, and AI-assisted recommendations where they provide measurable value
-
-## Design principles
-
-**Environmental Data → Connected Monitoring → Analytics → Insights → Better Sustainability Decisions**
-
-Eco Data SP is designed around modularity, interoperability, scalability, traceability, and human oversight.
+## Engineering boundary
+Eco Data SP is a monitoring and sustainability decision-support platform. Sensor and meter examples do not replace equipment selection, electrical/process engineering, calibration, industrial safety assessment or manufacturer documentation for a real deployment.
 
 ## Author
-
-**Raquel Cruz** — ADS student and developer building practical projects in software, data, IoT, and artificial intelligence.
+**Raquel Cruz** — ADS student and developer building practical projects in software, data, IoT and artificial intelligence.
